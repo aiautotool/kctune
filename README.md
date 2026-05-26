@@ -4,6 +4,8 @@ kctune is a macOS desktop audio converter for ambient creators, meditation produ
 
 It focuses on fast batch retuning, 432Hz/528Hz style exports, 3D/8D spatial motion, A/B playback, real waveform comparison, metadata-aware import, and creator-friendly output settings.
 
+![kctune desktop app](docs/kctune-screenshot.png)
+
 ## Highlights
 
 - Drag and drop audio files or folders into the app.
