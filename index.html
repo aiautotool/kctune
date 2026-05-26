@@ -302,6 +302,21 @@
               <label><input type="checkbox" checked /> Keep original metadata</label>
               <label><input type="checkbox" /> Normalize to -14 LUFS</label>
             </div>
+            <div class="blackhole-card" id="blackhole-card">
+              <div>
+                <strong>BlackHole Realtime Input</strong>
+                <span id="blackhole-status">Checking BlackHole 2ch...</span>
+              </div>
+              <label class="blackhole-switch">
+                <input id="blackhole-enable" type="checkbox" disabled />
+                <span>Use BlackHole</span>
+              </label>
+              <div class="blackhole-actions">
+                <button id="blackhole-refresh" type="button">Refresh</button>
+                <button id="blackhole-install" type="button">Install BlackHole</button>
+              </div>
+              <small id="blackhole-help">Route system audio through BlackHole 2ch for future realtime processing.</small>
+            </div>
             <div class="frequency-layers">
               <strong data-i18n="layers.title">Sound Layers</strong>
               <article class="layer-card enabled">

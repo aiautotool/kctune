@@ -44,6 +44,49 @@ function run(command, args) {
   });
 }
 
+async function runOptional(command, args) {
+  try {
+    return await run(command, args);
+  } catch (error) {
+    return error.stderr || error.message || "";
+  }
+}
+
+async function blackHoleStatus() {
+  const pkgutil = await runOptional("/usr/sbin/pkgutil", ["--pkgs"]);
+  const systemAudio = await runOptional("/usr/sbin/system_profiler", ["SPAudioDataType"]);
+  const driverPath = "/Library/Audio/Plug-Ins/HAL/BlackHole2ch.driver";
+  const pkgInstalled = /audio\.existential\.BlackHole2ch/i.test(pkgutil);
+  const driverInstalled = await pathExists(driverPath);
+  const deviceActive = /BlackHole\s*2ch|BlackHole2ch/i.test(systemAudio);
+  const installed = pkgInstalled || driverInstalled;
+
+  return {
+    installed,
+    pkgInstalled,
+    driverInstalled,
+    deviceActive,
+    driverPath,
+    status: deviceActive ? "ready" : installed ? "needs-reboot" : "not-installed",
+    message: deviceActive
+      ? "BlackHole 2ch is active."
+      : installed
+        ? "BlackHole 2ch is installed but not active yet. Restart macOS."
+        : "BlackHole 2ch is not installed."
+  };
+}
+
+async function openBlackHoleInstaller() {
+  const localPkg = "/opt/homebrew/Caskroom/blackhole-2ch/0.6.1/BlackHole2ch-0.6.1.pkg";
+  if (await pathExists(localPkg)) {
+    const result = await shell.openPath(localPkg);
+    if (result) throw new Error(result);
+    return { opened: "pkg", target: localPkg };
+  }
+  await shell.openExternal("https://existential.audio/blackhole/");
+  return { opened: "url", target: "https://existential.audio/blackhole/" };
+}
+
 function runFfmpegWithProgress(args, durationSeconds, onProgress) {
   return new Promise((resolve, reject) => {
     const progressArgs = ["-nostats", "-progress", "pipe:2", ...args];
@@ -903,6 +946,14 @@ ipcMain.handle("pick-output-folder", async (event) => {
     properties: ["openDirectory", "createDirectory"]
   });
   return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle("blackhole-status", async () => {
+  return blackHoleStatus();
+});
+
+ipcMain.handle("open-blackhole-installer", async () => {
+  return openBlackHoleInstaller();
 });
 
 ipcMain.handle("pick-artwork", async (event) => {

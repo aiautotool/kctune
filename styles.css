@@ -1443,6 +1443,60 @@ canvas {
   font-weight: 600;
 }
 
+.blackhole-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(38, 40, 50, 0.86), rgba(30, 18, 40, 0.72));
+}
+
+.blackhole-card.is-ready {
+  border-color: rgba(136, 229, 109, 0.34);
+}
+
+.blackhole-card.needs-install,
+.blackhole-card.needs-reboot {
+  border-color: rgba(224, 177, 106, 0.38);
+}
+
+.blackhole-card strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.blackhole-card span,
+.blackhole-card small {
+  color: var(--muted);
+}
+
+.blackhole-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.blackhole-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.blackhole-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--panel-lift);
+  color: var(--text);
+  border: 1px solid var(--stroke);
+}
+
+.blackhole-actions button.primary {
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+}
+
 input[type="checkbox"] {
   accent-color: #df77c4;
 }

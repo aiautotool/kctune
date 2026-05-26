@@ -15,6 +15,7 @@ let activeLibraryFilter = "All Files";
 const waveformCache = new Map();
 let waveformRequestToken = 0;
 let waveformState = { trackId: null, loading: false, original: null, converted: null, error: null };
+let blackHoleState = { status: "unknown", installed: false, deviceActive: false };
 const frequencyThemes = {
   174: "Pain relief",
   285: "Healing",
@@ -1270,6 +1271,76 @@ function ensureBridge() {
   return false;
 }
 
+async function refreshBlackHoleStatus() {
+  const card = $("#blackhole-card");
+  const statusLabel = $("#blackhole-status");
+  const enable = $("#blackhole-enable");
+  const install = $("#blackhole-install");
+  if (!card || !statusLabel || !enable || !install) return;
+
+  if (!window.zenTune?.blackHoleStatus) {
+    statusLabel.textContent = "BlackHole check is unavailable in this runtime.";
+    enable.disabled = true;
+    install.hidden = false;
+    return;
+  }
+
+  statusLabel.textContent = "Checking BlackHole 2ch...";
+  enable.disabled = true;
+  card.classList.remove("is-ready", "needs-install", "needs-reboot");
+
+  try {
+    blackHoleState = await window.zenTune.blackHoleStatus();
+    if (blackHoleState.status === "ready") {
+      card.classList.add("is-ready");
+      statusLabel.textContent = "Ready: BlackHole 2ch is active.";
+      enable.disabled = false;
+      install.hidden = true;
+      $("#blackhole-help").textContent = "Enable this when routing system audio into kctune via BlackHole 2ch.";
+    } else if (blackHoleState.status === "needs-reboot") {
+      card.classList.add("needs-reboot");
+      statusLabel.textContent = "Installed, but not active. Restart macOS to finish BlackHole setup.";
+      enable.checked = false;
+      enable.disabled = true;
+      install.hidden = true;
+      $("#blackhole-help").textContent = "Driver package is installed. Reboot is required before kctune can use it.";
+    } else {
+      card.classList.add("needs-install");
+      statusLabel.textContent = "Not installed. Install BlackHole 2ch to enable realtime routing.";
+      enable.checked = false;
+      enable.disabled = true;
+      install.hidden = false;
+      install.classList.add("primary");
+      $("#blackhole-help").textContent = "Install BlackHole 2ch first, then restart macOS if requested.";
+    }
+  } catch (error) {
+    statusLabel.textContent = `BlackHole check failed: ${error.message}`;
+    enable.checked = false;
+    enable.disabled = true;
+    install.hidden = false;
+  }
+}
+
+async function openBlackHoleInstaller() {
+  if (!ensureBridge()) return;
+  try {
+    await window.zenTune.openBlackHoleInstaller();
+    setProgress("BlackHole installer opened. Complete install, then refresh status.", 0);
+  } catch (error) {
+    showMessage(`Could not open BlackHole installer:\n${error.message}`);
+  }
+}
+
+function toggleBlackHoleMode() {
+  const enabled = $("#blackhole-enable")?.checked || false;
+  if (enabled && blackHoleState.status !== "ready") {
+    $("#blackhole-enable").checked = false;
+    showMessage("BlackHole 2ch is not active yet. Install it and restart macOS first.");
+    return;
+  }
+  setProgress(enabled ? "BlackHole realtime input enabled." : "BlackHole realtime input disabled.", 0);
+}
+
 function targetFrequency() {
   const custom = Number($("#custom-frequency")?.value);
   if (Number.isFinite(custom) && custom > 0) return custom;
@@ -1529,6 +1600,10 @@ document.querySelectorAll(".title-actions button").forEach((button) => {
   });
 });
 
+$("#blackhole-refresh")?.addEventListener("click", refreshBlackHoleStatus);
+$("#blackhole-install")?.addEventListener("click", openBlackHoleInstaller);
+$("#blackhole-enable")?.addEventListener("change", toggleBlackHoleMode);
+
 let dragDepth = 0;
 window.addEventListener("dragenter", (event) => {
   event.preventDefault();
@@ -1554,6 +1629,7 @@ applyLanguage(currentLanguage);
 renderRows();
 updateSelection();
 syncFrequencyControls("select");
+refreshBlackHoleStatus();
 
 function navLabel(link) {
   const clone = link.cloneNode(true);

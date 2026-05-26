@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("zenTune", {
   filePathForDrop: (file) => webUtils.getPathForFile(file),
   importDroppedPaths: (paths) => ipcRenderer.invoke("import-dropped-paths", paths),
   pickOutputFolder: () => ipcRenderer.invoke("pick-output-folder"),
+  blackHoleStatus: () => ipcRenderer.invoke("blackhole-status"),
+  openBlackHoleInstaller: () => ipcRenderer.invoke("open-blackhole-installer"),
   pickArtwork: () => ipcRenderer.invoke("pick-artwork"),
   convertTracks: (tracks, options) => ipcRenderer.invoke("convert-tracks", tracks, options),
   previewTrack: (track, mode) => ipcRenderer.invoke("preview-track", track, mode),

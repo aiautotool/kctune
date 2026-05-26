@@ -21,6 +21,7 @@ It focuses on fast batch retuning, 432Hz/528Hz style exports, 3D/8D spatial moti
 - Auto Tune Pro pipeline: center-vocal extraction, pYIN pitch detection, snap-to-scale, frame pitch shift, and mix back.
 - Output gain, bass/drum punch, and clean vocal-focused EQ controls.
 - Vietnamese, English, and Chinese UI language support.
+- BlackHole 2ch detection UI for future realtime system-audio routing.
 
 ## Screens
 
