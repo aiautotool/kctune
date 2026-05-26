@@ -1,0 +1,32 @@
+.DS_Store
+
+# Dependencies
+node_modules/
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+
+# Build artifacts
+release/
+dist/
+out/
+zentune-native/.build/
+*.dmg
+*.zip
+
+# Generated audio / local test files
+test-output/
+Converted_*/
+*.wav
+*.mp3
+*.flac
+*.aac
+*.m4a
+*.aiff
+*.aif
+
+# Local launch/runtime noise
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

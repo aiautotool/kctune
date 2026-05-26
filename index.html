@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kctune</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="drop-overlay" id="drop-overlay">
+      <div>
+        <strong>Drop audio here</strong>
+        <span>MP3, WAV, FLAC, AAC, M4A, AIFF or folders</span>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <section class="brand">
+          <div class="sakura-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h1>Kctune</h1>
+            <p>Audio Converter</p>
+            <small>v1.0.0</small>
+          </div>
+        </section>
+
+        <button class="primary-wide" id="add-files">＋ Add Files</button>
+        <button class="ghost-wide" id="add-folder">
+          <span class="icon">▱</span>
+          Add Folder
+        </button>
+
+        <nav class="nav-section">
+          <p>Library</p>
+          <a class="active"><span>▣</span> All Files <b id="all-count">18</b></a>
+          <a><span>◉</span> Converted <b id="converted-count">6</b></a>
+          <a><span>✺</span> Processing <b id="processing-count">0</b></a>
+          <a><span>☆</span> Favorites <b>2</b></a>
+        </nav>
+
+        <nav class="nav-section">
+          <p>Tools</p>
+          <a><span>▦</span> Batch Convert</a>
+          <a><span>♬</span> Frequency Analyzer</a>
+          <a><span>⌘</span> A/B Compare</a>
+          <a><span>◇</span> Tag Editor</a>
+        </nav>
+
+        <nav class="nav-section">
+          <p>Settings</p>
+          <a><span>⚙</span> Conversion Settings</a>
+          <a><span>▱</span> Output Settings</a>
+          <a><span>◴</span> Metadata</a>
+          <a><span>☼</span> Advanced</a>
+        </nav>
+
+        <section class="sidebar-art">
+          <div class="moon"></div>
+          <div class="pagoda"></div>
+          <div class="shore"></div>
+        </section>
+
+        <section class="mini-player">
+          <div class="mini-wave" id="mini-artwork"></div>
+          <div>
+            <strong id="mini-title">No track</strong>
+            <p id="mini-status">Idle</p>
+          </div>
+          <time id="mini-time">00:00</time>
+        </section>
+
+        <section class="sidebar-volume">
+          <span>⌕</span>
+          <div><i style="width: 82%"></i></div>
+          <span>→</span>
+        </section>
+      </aside>
+
+      <main class="main">
+        <header class="titlebar">
+          <div></div>
+          <strong>kctune</strong>
+          <div class="title-actions">
+            <select id="language-select" class="language-select" aria-label="Language">
+              <option value="vi">VI</option>
+              <option value="en">EN</option>
+              <option value="zh">中文</option>
+            </select>
+            <button>⚙ Settings</button>
+            <button>ⓘ About</button>
+          </div>
+        </header>
+
+        <section class="dashboard">
+          <section class="card file-card">
+            <div class="card-head">
+              <h2>All Files (<span id="file-total">18</span>)</h2>
+              <div class="table-actions">
+                <button id="import-button">Import⌄</button>
+                <button id="refresh-button">⟳</button>
+                <button>☷</button>
+                <button class="selected">▦</button>
+              </div>
+            </div>
+            <div class="file-table">
+              <div class="file-row table-header">
+                <span>#</span>
+                <span>File Name</span>
+                <span>Duration</span>
+                <span>Format</span>
+                <span>Sample Rate</span>
+                <span>Bitrate</span>
+                <span>Status</span>
+              </div>
+              <div id="file-rows"></div>
+            </div>
+          </section>
+
+          <section class="card player-card">
+            <div class="track-overview">
+              <div class="cover-art">
+                <div class="moon"></div>
+                <div class="mountain a"></div>
+                <div class="mountain b"></div>
+                <div class="pagoda"></div>
+              </div>
+              <div class="track-copy">
+                <h2 id="track-title">Ronin's Path.flac</h2>
+                <p id="track-duration">01:05:42</p>
+                <p id="track-meta">48 kHz • FLAC</p>
+                <small>Status</small>
+                <b id="track-status">Ready</b>
+              </div>
+            </div>
+
+            <div class="ab-toggle">
+              <button id="preview-original">Original (Source Hz)</button>
+              <button id="preview-converted" class="active">Converted (Target Hz)</button>
+            </div>
+
+            <div class="seek-row">
+              <span id="seek-current">00:00</span>
+              <div class="seek" id="seek-bar"><i id="seek-fill"></i></div>
+              <span id="seek-duration">01:05:42</span>
+            </div>
+
+            <div class="transport">
+              <button>ᐊ</button>
+              <button class="play" id="play-preview">▶</button>
+              <button>ᐅ</button>
+              <button class="stop" id="stop-preview" title="Stop">⏹</button>
+            </div>
+
+            <div class="volume-row">
+              <span>⌕</span>
+              <div><i></i></div>
+              <span>100%</span>
+            </div>
+          </section>
+
+          <section class="card waveform-card">
+            <div class="panel-title">
+              <h2>A/B Comparison</h2>
+              <div class="tabs">
+                <button class="active">Waveform</button>
+                <button>Spectrum</button>
+                <button>Spectrogram</button>
+                <button>Loudness</button>
+                <button>▧ Stats</button>
+              </div>
+            </div>
+            <canvas id="waveform-canvas" width="700" height="250"></canvas>
+            <div class="timeline">
+              <span>0:00</span><span>0:15</span><span>0:30</span><span>0:45</span><span>1:00</span><span>1:05:42</span>
+            </div>
+          </section>
+
+          <section class="card spectrum-card">
+            <div class="panel-title compact">
+              <h2>Spectrum Analyzer <em>?</em></h2>
+              <div class="legend">
+                <span class="blue">Original (Source Hz)</span>
+                <span class="pink">Converted (Target Hz)</span>
+              </div>
+            </div>
+            <canvas id="spectrum-canvas" width="560" height="250"></canvas>
+            <footer>
+              <span>Peak Shift: -1.818%</span>
+              <span>Frequency Shift: Source → Target</span>
+            </footer>
+          </section>
+
+          <section class="card batch-card">
+            <div class="panel-title compact">
+              <h2 data-i18n="batch.title">Batch Conversion</h2>
+              <span class="mode-pill" data-i18n="batch.mode">High Quality</span>
+            </div>
+            <div class="batch-stack">
+              <button class="primary-action" id="convert-all">⟳ Convert All</button>
+              <button class="secondary-action" id="convert-selected">Convert Selected (0)</button>
+              <div class="queue-summary">
+                <label data-i18n="batch.queue">Queue</label>
+                <p><b id="processed-count">0</b>/<span id="total-count">18</span> files</p>
+                <div class="small-progress"><i id="small-progress"></i></div>
+                <small id="progress-label">Ready to convert</small>
+              </div>
+              <div class="batch-actions split">
+                <button class="secondary-action" id="choose-output" data-i18n="output.choose">Choose Output Folder</button>
+                <button class="secondary-action" id="open-output" data-i18n="output.open">Open Output Folder</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card output-card">
+            <h2 data-i18n="output.title">Output Settings</h2>
+            <div class="studio-presets">
+              <button data-preset="youtube-sleep" data-i18n="preset.youtubeSleep">YouTube Sleep</button>
+              <button data-preset="meditation" data-i18n="preset.meditation">Meditation</button>
+              <button data-preset="ambient-producer" data-i18n="preset.ambient">Ambient</button>
+              <button data-preset="healing-frequency" data-i18n="preset.healing">Healing</button>
+              <button data-preset="lofi-chill" data-i18n="preset.lofi">Lo-fi</button>
+              <button data-preset="cinematic-trailer" data-i18n="preset.cinematic">Cinematic</button>
+            </div>
+            <div class="settings-grid output-settings-grid">
+              <label><span data-i18n="output.sourceHz">Source Hz</span>
+                <input id="source-frequency" type="number" min="100" max="1200" step="1" value="440" />
+              </label>
+              <label><span data-i18n="output.targetHz">Target Hz</span>
+                <select id="target-frequency-select" class="select">
+                  <option value="432">432Hz • Natural tuning</option>
+                  <option value="440">440Hz • Standard</option>
+                  <option value="174">174Hz • Pain relief</option>
+                  <option value="285">285Hz • Healing</option>
+                  <option value="396">396Hz • Fear release</option>
+                  <option value="417">417Hz • Change</option>
+                  <option value="528">528Hz • Love/healing</option>
+                  <option value="639">639Hz • Relationships</option>
+                  <option value="741">741Hz • Cleansing</option>
+                  <option value="852">852Hz • Intuition</option>
+                  <option value="963">963Hz • Higher consciousness</option>
+                </select>
+              </label>
+              <label><span data-i18n="output.customHz">Custom Hz</span>
+                <input id="custom-frequency" type="number" min="100" max="1200" step="1" value="432" />
+              </label>
+              <label><span data-i18n="output.format">Format</span>
+                <select id="format-select">
+                  <option value="MP3">MP3</option>
+                  <option value="FLAC">FLAC Lossless</option>
+                  <option value="WAV" selected>WAV Lossless</option>
+                  <option value="AAC">AAC</option>
+                  <option value="AIFF">AIFF Lossless</option>
+                </select>
+              </label>
+              <label><span data-i18n="output.bitrate">Bitrate</span>
+                <select id="bitrate-select">
+                  <option value="320k">320 kbps</option>
+                  <option value="512k">512 kbps (AAC)</option>
+                  <option value="256k">256 kbps</option>
+                  <option value="192k">192 kbps</option>
+                  <option value="128k">128 kbps</option>
+                  <option value="lossless">Lossless</option>
+                </select>
+              </label>
+              <label><span data-i18n="output.sampleRate">Sample Rate</span>
+                <select id="sample-rate-select">
+                  <option value="keep">Keep Original</option>
+                  <option value="44100">44.1 kHz</option>
+                  <option value="48000">48 kHz</option>
+                  <option value="96000">96 kHz</option>
+                </select>
+              </label>
+              <label><span data-i18n="output.gain">Output Gain</span>
+                <select id="output-gain-select">
+                  <option value="-6">-6 dB</option>
+                  <option value="-3">-3 dB</option>
+                  <option value="0">0 dB</option>
+                  <option value="1.5">+1.5 dB</option>
+                  <option value="3">+3 dB</option>
+                  <option value="4.5">+4.5 dB</option>
+                  <option value="6">+6 dB</option>
+                  <option value="7.5">+7.5 dB</option>
+                  <option value="9">+9 dB</option>
+                  <option value="10.5">+10.5 dB</option>
+                  <option value="12">+12 dB</option>
+                  <option value="15" selected>+15 dB</option>
+                  <option value="18">+18 dB</option>
+                </select>
+              </label>
+            </div>
+            <label class="output-path">
+              <span data-i18n="output.folder">Output Folder</span>
+              <div>
+                <span id="output-path">Auto: Converted_432Hz beside source</span>
+                <button id="output-folder">▱</button>
+              </div>
+            </label>
+            <div class="checks">
+              <label><input type="checkbox" checked /> Preserve folder structure</label>
+              <label><input type="checkbox" checked /> Keep original metadata</label>
+              <label><input type="checkbox" /> Normalize to -14 LUFS</label>
+            </div>
+            <div class="frequency-layers">
+              <strong data-i18n="layers.title">Sound Layers</strong>
+              <article class="layer-card enabled">
+                <label><input id="layer-frequency-toggle" type="checkbox" checked disabled /> <b data-i18n="layers.frequency">Layer 1: Frequency</b></label>
+                <span id="layer-frequency-summary">Auto → 432Hz</span>
+              </article>
+              <article class="layer-card">
+                <label><input id="binaural-toggle" type="checkbox" /> <b data-i18n="layers.space">Layer 2: 3D Space</b></label>
+                <span data-i18n="layers.spaceDesc">Soft stereo depth</span>
+              </article>
+              <article class="layer-card">
+                <label><input id="export-8d-toggle" type="checkbox" /> <b data-i18n="layers.motion">Layer 3: 8D Motion</b></label>
+                <span data-i18n="layers.motionDesc">Zen orbit movement</span>
+              </article>
+              <details class="advanced-layers">
+                <summary data-i18n="layers.advanced">Advanced Layer Settings</summary>
+                <div>
+                  <label><input id="layer-528-toggle" type="checkbox" /> 528Hz resonance drone</label>
+                  <label>Brainwave
+                    <select id="brainwave-select">
+                      <option value="none">None</option>
+                      <option value="delta">Delta 0.5–4Hz • deep sleep</option>
+                      <option value="theta" selected>Theta 4–8Hz • meditation</option>
+                      <option value="alpha">Alpha 8–12Hz • relaxation/focus</option>
+                      <option value="beta">Beta 13–30Hz • concentration</option>
+                    </select>
+                  </label>
+                  <label>Beat Hz <input id="binaural-beat" type="number" min="0.5" max="30" step="0.5" value="6" /></label>
+                  <label><input id="nature-layer-toggle" type="checkbox" /> Nature ambience</label>
+                  <label><input id="auto-tune-toggle" type="checkbox" /> Auto Tune Pro</label>
+                  <label>Auto Tune Key
+                    <select id="auto-tune-key">
+                      <option value="Auto" selected>Auto</option>
+                      <option value="C">C</option>
+                      <option value="Db">Db</option>
+                      <option value="D">D</option>
+                      <option value="Eb">Eb</option>
+                      <option value="E">E</option>
+                      <option value="F">F</option>
+                      <option value="Gb">Gb</option>
+                      <option value="G">G</option>
+                      <option value="Ab">Ab</option>
+                      <option value="A">A</option>
+                      <option value="Bb">Bb</option>
+                      <option value="B">B</option>
+                    </select>
+                  </label>
+                  <label>Auto Tune Scale
+                    <select id="auto-tune-scale">
+                      <option value="Major" selected>Major</option>
+                      <option value="Minor">Minor</option>
+                      <option value="Major Pentatonic">Major Pentatonic</option>
+                      <option value="Minor Pentatonic">Minor Pentatonic</option>
+                    </select>
+                  </label>
+                  <label>Snap Strength
+                    <select id="auto-tune-strength">
+                      <option value="25">Natural 25%</option>
+                      <option value="55" selected>Balanced 55%</option>
+                      <option value="85">Hard 85%</option>
+                    </select>
+                  </label>
+                  <label><input id="bass-enhance-toggle" type="checkbox" checked /> Bass & drum punch</label>
+                  <label>Bass Boost
+                    <select id="bass-boost-select">
+                      <option value="0">Off / Clear vocal</option>
+                      <option value="3" selected>Clean punch +3 dB</option>
+                      <option value="6">Deep +6 dB</option>
+                      <option value="9">Heavy +9 dB</option>
+                    </select>
+                  </label>
+                  <label>8D Motion
+                    <select id="export-8d-speed">
+                      <option value="0.035">Slow orbit</option>
+                      <option value="0.055" selected>Zen orbit</option>
+                      <option value="0.085">Deep sweep</option>
+                      <option value="0.12">Wide circle</option>
+                    </select>
+                  </label>
+                  <label>8D Depth
+                    <select id="export-8d-depth">
+                      <option value="0.45">Soft</option>
+                      <option value="0.68" selected>Balanced</option>
+                      <option value="0.85">Deep</option>
+                      <option value="1">Extreme</option>
+                    </select>
+                  </label>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <section class="card benefits-card">
+            <h3>432Hz Benefits</h3>
+            <div>
+              <article><b>⌁</b><span>More relaxing</span></article>
+              <article><b>♡</b><span>Better sleep</span></article>
+              <article><b>♧</b><span>Reduces stress</span></article>
+              <article><b>♨</b><span>Deep meditation</span></article>
+              <article><b>✧</b><span>Emotional healing</span></article>
+              <article><b>☯</b><span>Inner peace</span></article>
+            </div>
+          </section>
+
+          <section class="card info-card">
+            <div>
+              <h3>Conversion Info</h3>
+              <p><b>Files:</b> <span id="info-files">18</span></p>
+              <p><b>Total Duration:</b> 3:03</p>
+            </div>
+            <div>
+              <p><b>Files:</b> 3</p>
+              <p><b>Estimated:</b> <s>3.43GB</s> → 3.18 GB</p>
+            </div>
+            <div class="reduction">
+              <strong>-7.0%</strong>
+              <span>Size Reduction</span>
+            </div>
+          </section>
+
+          <section class="card route-card" id="route-card" hidden>
+            <div class="route-head">
+              <div>
+                <p id="route-kicker">Tools</p>
+                <h2 id="route-title">Frequency Analyzer</h2>
+              </div>
+              <button id="route-back">Back to Dashboard</button>
+            </div>
+            <div class="route-body" id="route-body"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "kctune",
+  "version": "1.0.0",
+  "description": "kctune desktop audio retune and spatial converter for macOS creators",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "preview": "python3 -m http.server 4173",
+    "build:mac": "electron-packager . kctune --platform=darwin --arch=arm64 --out=release --overwrite --prune=true --extra-resource=scripts --extra-resource=THIRD_PARTY_NOTICES.md --ignore='^/(release|test-output|zentune-native|__pycache__|\\.venv|\\.venv-macos|\\.venv-autotune)(/|$)' --ignore='^/(app\\.py|run_app\\.command|requirements\\.txt|README\\.md)$' && npm run apply:icon",
+    "apply:icon": "cp assets/icon.icns release/kctune-darwin-arm64/kctune.app/Contents/Resources/electron.icns && touch release/kctune-darwin-arm64/kctune.app"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.0.0",
+    "electron": "^33.4.11"
+  }
+}
