@@ -5,7 +5,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
-const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".flac", ".aac", ".m4a", ".aiff", ".aif"]);
+const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".flac", ".aac", ".m4a", ".aiff", ".aif", ".webm"]);
 const ARTWORK_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 let previewProcess = null;
 
@@ -983,7 +983,7 @@ ipcMain.handle("pick-files", async (event) => {
   const result = await dialog.showOpenDialog(parent, {
     properties: ["openFile", "multiSelections"],
     filters: [
-      { name: "Audio", extensions: ["mp3", "wav", "flac", "aac", "m4a", "aiff", "aif"] }
+      { name: "Audio", extensions: ["mp3", "wav", "flac", "aac", "m4a", "aiff", "aif", "webm"] }
     ]
   });
 

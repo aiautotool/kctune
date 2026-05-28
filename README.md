@@ -9,7 +9,7 @@ It focuses on fast batch retuning, 432Hz/528Hz style exports, 3D/8D spatial moti
 ## Highlights
 
 - Drag and drop audio files or folders into the app.
-- Import MP3, WAV, FLAC, AAC, M4A, AIFF, and AIF files.
+- Import MP3, WAV, FLAC, AAC, M4A, AIFF, AIF, and WEBM files.
 - Batch convert selected files or the full library.
 - Retune source frequency to target frequencies such as 432Hz, 528Hz, or custom values.
 - Export WAV lossless by default, with MP3, FLAC, AAC, and AIFF options.

@@ -211,7 +211,7 @@ function renderRows() {
     empty.className = "empty-state";
     empty.innerHTML = `
       <strong>${tracks.length ? `No files in ${activeLibraryFilter}` : "No real audio files loaded"}</strong>
-      <span>${tracks.length ? "Choose another library filter or import more audio." : "Click Add Files or Add Folder to import MP3, WAV, FLAC, AAC, M4A, or AIFF."}</span>
+      <span>${tracks.length ? "Choose another library filter or import more audio." : "Click Add Files or Add Folder to import MP3, WAV, FLAC, AAC, M4A, AIFF, or WEBM."}</span>
     `;
     container.appendChild(empty);
   }
