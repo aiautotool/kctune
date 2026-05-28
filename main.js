@@ -393,25 +393,56 @@ function autoTuneLabel(options = {}) {
 function bassDrumEnhanceFilter(options = {}) {
   if (options.bassEnhanceEnabled === false) return "";
   const boost = numberInRange(options.bassBoostDb, 3, 0, 9);
-  const sub = Math.min(4.5, boost * 0.55).toFixed(1);
-  const kick = Math.min(4.0, boost * 0.7).toFixed(1);
-  const body = Math.min(1.5, boost * 0.22).toFixed(1);
+  const sub = Math.min(1.8, boost * 0.22).toFixed(1);
+  const punch = Math.min(2.2, boost * 0.34).toFixed(1);
   return [
-    `equalizer=f=48:t=q:w=1.4:g=${sub}`,
-    `equalizer=f=88:t=q:w=1.2:g=${kick}`,
-    `equalizer=f=145:t=q:w=1.1:g=${body}`,
-    "equalizer=f=245:t=q:w=1.0:g=-2.8",
-    "equalizer=f=380:t=q:w=1.0:g=-2.4",
-    "equalizer=f=950:t=q:w=1.1:g=0.9",
-    "equalizer=f=2900:t=q:w=1.2:g=2.2",
-    "equalizer=f=7200:t=q:w=1.1:g=1.5",
-    "highpass=f=28"
+    "highpass=f=28",
+    `equalizer=f=55:t=q:w=1.1:g=${sub}`,
+    `equalizer=f=92:t=q:w=1.0:g=${punch}`,
+    "equalizer=f=175:t=q:w=1.0:g=-1.6",
+    "equalizer=f=255:t=q:w=1.0:g=-2.8",
+    "equalizer=f=340:t=q:w=1.1:g=-1.8",
+    "equalizer=f=2800:t=q:w=1.3:g=0.8"
   ].map((filter) => `,${filter}`).join("");
+}
+
+function masteringProfile(options = {}) {
+  const explicit = String(options.masteringPreset || "").toLowerCase();
+  const brainwave = String(options.brainwave || "").toLowerCase();
+  const targetFrequencyValue = Number(options.targetFrequency);
+  const use8d = Boolean(options.export8dEnabled);
+
+  let preset = explicit || "chill";
+  if (!explicit && (brainwave === "theta" || brainwave === "delta" || targetFrequencyValue === 528)) preset = "zen";
+  if (!explicit && use8d) preset = "ambient-cinematic";
+
+  const profiles = {
+    chill: {
+      lufs: -13.5, lra: 9, truePeak: -1.3, subTrim: -1.2, mudCut: -2.6, warmth: 0.4, air: 1.1, width: 0.08, clip: 0.94
+    },
+    zen: {
+      lufs: -16, lra: 11, truePeak: -1.8, subTrim: -2.4, mudCut: -3.0, warmth: 0.2, air: 0.7, width: 0.05, clip: 0.96
+    },
+    "ambient-cinematic": {
+      lufs: -12, lra: 10, truePeak: -1.2, subTrim: -0.8, mudCut: -2.8, warmth: 0.8, air: 1.4, width: 0.12, clip: 0.93
+    },
+    lofi: {
+      lufs: -14, lra: 8, truePeak: -1.5, subTrim: -1.4, mudCut: -2.2, warmth: 1.0, air: -0.2, width: 0.04, clip: 0.92
+    },
+    "trap-rap": {
+      lufs: -10.5, lra: 7, truePeak: -1.0, subTrim: -0.4, mudCut: -2.4, warmth: 0.2, air: 0.8, width: 0.04, clip: 0.91
+    },
+    rock: {
+      lufs: -11.5, lra: 7, truePeak: -1.1, subTrim: -1.0, mudCut: -2.1, warmth: 0.1, air: 0.9, width: 0.03, clip: 0.91
+    }
+  };
+
+  return { name: preset, ...(profiles[preset] || profiles.chill) };
 }
 
 function outputGainDb(value) {
   const gain = Number(value);
-  if (!Number.isFinite(gain)) return 15;
+  if (!Number.isFinite(gain)) return 0;
   return Math.max(-6, Math.min(18, gain));
 }
 
@@ -433,6 +464,32 @@ function gainLabel(value) {
 
 function finalizeAudioFilter(inputLabel, outputLabel, gainDb, limit = 0.98) {
   return `[${inputLabel}]${outputGainStage(gainDb)},alimiter=limit=${limit}[${outputLabel}]`;
+}
+
+function professionalMasteringFilter(inputLabel, outputLabel, options = {}, gainDb = 0) {
+  const profile = masteringProfile(options);
+  const gainStage = outputGainStage(gainDb);
+  const width = profile.width.toFixed(2);
+  const subVolume = Math.pow(10, profile.subTrim / 20).toFixed(3);
+  const warm = profile.warmth.toFixed(1);
+  const air = profile.air.toFixed(1);
+  const mudCut = profile.mudCut.toFixed(1);
+  const clip = profile.clip.toFixed(2);
+
+  return [
+    // Linear-style corrective EQ: remove unstable sub rumble, mud and harshness before dynamics.
+    `[${inputLabel}]aformat=channel_layouts=stereo,highpass=f=27,equalizer=f=155:t=q:w=1.0:g=-1.4,equalizer=f=245:t=q:w=1.05:g=${mudCut},equalizer=f=335:t=q:w=1.1:g=-1.8,equalizer=f=1150:t=q:w=1.2:g=${warm},equalizer=f=3800:t=q:w=1.5:g=0.8,deesser=i=0.16:m=0.36:f=0.44[${inputLabel}tone]`,
+    // Frequency-aware bus split: keep sub mono, control low-mid body, and process air separately.
+    `[${inputLabel}tone]asplit=3[${inputLabel}subsrc][${inputLabel}midsrc][${inputLabel}airsrc]`,
+    // Mono sub below 120Hz with gentle compression. This stabilizes headphones, mobile and YouTube playback.
+    `[${inputLabel}subsrc]lowpass=f=120,pan=stereo|FL=0.5*c0+0.5*c1|FR=0.5*c0+0.5*c1,volume=${subVolume},acompressor=threshold=0.50:ratio=3.2:attack=28:release=210:makeup=1[${inputLabel}sub]`,
+    // Mid band remains mostly centered and clean. This is where vocals, pads and ambience need room.
+    `[${inputLabel}midsrc]highpass=f=120,lowpass=f=6500,acompressor=threshold=0.62:ratio=1.55:attack=18:release=180:makeup=1[${inputLabel}mid]`,
+    // Air band adds openness without harshness; widening is only above the mud/vocal range.
+    `[${inputLabel}airsrc]highpass=f=6500,equalizer=f=12000:t=q:w=0.8:g=${air},acompressor=threshold=0.70:ratio=1.28:attack=4:release=120:makeup=1,stereowiden=delay=8:feedback=0.05:crossfeed=0.18:drymix=${(0.82 + Number(width)).toFixed(2)}[${inputLabel}air]`,
+    // Master bus: controlled recombine, soft saturation, loudness target, final soft clip and limiter.
+    `[${inputLabel}sub][${inputLabel}mid][${inputLabel}air]amix=inputs=3:duration=first:normalize=0,asoftclip=type=tanh:threshold=${clip}:output=0.98:oversample=2,loudnorm=I=${profile.lufs}:LRA=${profile.lra}:TP=${profile.truePeak}:linear=true,${gainStage},asoftclip=type=atan:threshold=0.98:output=0.98:oversample=2,alimiter=limit=0.97:attack=5:release=80[${outputLabel}]`
+  ];
 }
 
 function numberInRange(value, fallback, min, max) {
@@ -689,20 +746,24 @@ async function convertTrack(track, options, onProgress) {
     filterParts.push(`${mixLabels.join("")}amix=inputs=${mixLabels.length}:duration=first:dropout_transition=2${autoTuneFilter(useAutoTune, options)}${bassDrumEnhanceFilter(options)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220[premaster]`);
     if (use8d) {
       filterParts.push(...spatial8dFilter("premaster", "spatial", options));
-      filterParts.push(finalizeAudioFilter("spatial", "aout", gainDb));
+      filterParts.push(...professionalMasteringFilter("spatial", "aout", options, gainDb));
     } else {
-      filterParts.push(finalizeAudioFilter("premaster", "aout", gainDb));
+      filterParts.push(...professionalMasteringFilter("premaster", "aout", options, gainDb));
     }
     args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
   } else if (use8d) {
     const filterParts = [
       `[0:a]asetrate=${shiftedRate},aresample=${outputSampleRate},aformat=channel_layouts=stereo${autoTuneFilter(useAutoTune, options)}${bassDrumEnhanceFilter(options)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220[premaster]`,
       ...spatial8dFilter("premaster", "spatial", options),
-      finalizeAudioFilter("spatial", "aout", gainDb)
+      ...professionalMasteringFilter("spatial", "aout", options, gainDb)
     ];
     args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
   } else {
-    args.push("-map", "0:a:0", "-filter:a", `asetrate=${shiftedRate},aresample=${outputSampleRate}${autoTuneFilter(useAutoTune, options)}${bassDrumEnhanceFilter(options)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220${outputGainFilter(gainDb)},alimiter=limit=0.98`);
+    const filterParts = [
+      `[0:a]asetrate=${shiftedRate},aresample=${outputSampleRate},aformat=channel_layouts=stereo${autoTuneFilter(useAutoTune, options)}${bassDrumEnhanceFilter(options)},acompressor=threshold=0.65:ratio=1.65:attack=18:release=180[premaster]`,
+      ...professionalMasteringFilter("premaster", "aout", options, gainDb)
+    ];
+    args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
   }
 
   if (embedsArtwork) {
@@ -778,6 +839,7 @@ async function convertTrack(track, options, onProgress) {
         useBinaural ? `${options.brainwave || "binaural"} ${Number(options.binauralBeat) || 0}Hz hard-pan beat` : null,
         useNature ? "nature ambience" : null,
         options.bassEnhanceEnabled === false ? null : `bass/drum punch +${numberInRange(options.bassBoostDb, 6, 0, 12)}dB`,
+        `mastering ${masteringProfile(options).name} ${masteringProfile(options).lufs} LUFS`,
         use8d ? `8D spatial orbit depth ${numberInRange(options.export8dDepth, 0.68, 0.2, 1)}` : null,
         autoTuneLabel({ ...options, autoTuneEnabled: useAutoTune, autoTuneReport }),
         gainLabel(gainDb)
@@ -851,20 +913,24 @@ async function createPreview(track, mode) {
       filterParts.push(`${mixLabels.join("")}amix=inputs=${mixLabels.length}:duration=first:dropout_transition=2${autoTuneFilter(useAutoTune, blend)}${bassDrumEnhanceFilter(blend)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220[premaster]`);
       if (use8d) {
         filterParts.push(...spatial8dFilter("premaster", "spatial", blend));
-        filterParts.push(finalizeAudioFilter("spatial", "aout", gainDb));
+        filterParts.push(...professionalMasteringFilter("spatial", "aout", blend, gainDb));
       } else {
-        filterParts.push(finalizeAudioFilter("premaster", "aout", gainDb));
+        filterParts.push(...professionalMasteringFilter("premaster", "aout", blend, gainDb));
       }
       args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
     } else if (use8d) {
       const filterParts = [
         `[0:a]asetrate=${shiftedRate},aresample=${sampleRate},aformat=channel_layouts=stereo${autoTuneFilter(useAutoTune, blend)}${bassDrumEnhanceFilter(blend)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220[premaster]`,
         ...spatial8dFilter("premaster", "spatial", blend),
-        finalizeAudioFilter("spatial", "aout", gainDb)
+        ...professionalMasteringFilter("spatial", "aout", blend, gainDb)
       ];
       args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
     } else {
-      args.push("-filter:a", `asetrate=${shiftedRate},aresample=${sampleRate}${autoTuneFilter(useAutoTune, blend)}${bassDrumEnhanceFilter(blend)},acompressor=threshold=0.65:ratio=2.2:attack=18:release=220${outputGainFilter(gainDb)},alimiter=limit=0.98`);
+      const filterParts = [
+        `[0:a]asetrate=${shiftedRate},aresample=${sampleRate},aformat=channel_layouts=stereo${autoTuneFilter(useAutoTune, blend)}${bassDrumEnhanceFilter(blend)},acompressor=threshold=0.65:ratio=1.65:attack=18:release=180[premaster]`,
+        ...professionalMasteringFilter("premaster", "aout", blend, gainDb)
+      ];
+      args.push("-filter_complex", filterParts.join(";"), "-map", "[aout]");
     }
   }
 

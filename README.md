@@ -22,6 +22,7 @@ It focuses on fast batch retuning, 432Hz/528Hz style exports, 3D/8D spatial moti
 - Output gain, bass/drum punch, and clean vocal-focused EQ controls.
 - Vietnamese, English, and Chinese UI language support.
 - BlackHole 2ch detection UI for future realtime system-audio routing.
+- Professional deep-clean mastering chain with mono sub, mud control, saturation, loudness targets and limiting.
 
 ## Screens
 
@@ -90,6 +91,16 @@ scripts/autotune_requirements.txt
 ```
 
 The app creates or uses a local Python environment for the worker. The first Auto Tune Pro conversion can take longer because dependencies and analysis caches may need to initialize.
+
+## DSP / Mastering Chain
+
+The current production DSP chain is documented in:
+
+```text
+docs/DSP_PIPELINE.md
+```
+
+It covers the FFmpeg implementation, low-end management, mono sub bass, multiband-style bus split, saturation, loudness targets, preset values, WebAudio design, Node.js realtime design, and VST-style chain.
 
 ## 8D Audio
 

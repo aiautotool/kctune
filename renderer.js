@@ -16,6 +16,7 @@ const waveformCache = new Map();
 let waveformRequestToken = 0;
 let waveformState = { trackId: null, loading: false, original: null, converted: null, error: null };
 let blackHoleState = { status: "unknown", installed: false, deviceActive: false };
+let currentMasteringPreset = "chill";
 const frequencyThemes = {
   174: "Pain relief",
   285: "Healing",
@@ -139,6 +140,7 @@ function textFor(key) {
 function applyDefaultOutputSettings() {
   $("#format-select").value = "WAV";
   $("#bitrate-select").value = "lossless";
+  $("#output-gain-select").value = "0";
 }
 
 function selectedOutputFormat() {
@@ -869,7 +871,8 @@ async function convertTracks(targetTracks, options = {}) {
       bassBoostDb: Number($("#bass-boost-select")?.value || 3),
       export8dEnabled: $("#export-8d-toggle")?.checked || false,
       export8dSpeed: Number($("#export-8d-speed")?.value || 0.055),
-      export8dDepth: Number($("#export-8d-depth")?.value || 0.68)
+      export8dDepth: Number($("#export-8d-depth")?.value || 0.68),
+      masteringPreset: currentMasteringPreset
     });
 
     const byId = new Map([...result.converted, ...result.failed].map((track) => [track.id, track]));
@@ -1023,7 +1026,8 @@ async function preview(mode) {
         export8dEnabled: $("#export-8d-toggle")?.checked || false,
         export8dSpeed: Number($("#export-8d-speed")?.value || 0.055),
         export8dDepth: Number($("#export-8d-depth")?.value || 0.68),
-        outputGainDb: Number($("#output-gain-select")?.value || 0)
+        outputGainDb: Number($("#output-gain-select")?.value || 0),
+        masteringPreset: currentMasteringPreset
       };
     }
     $("#preview-original").classList.toggle("active", mode === "original");
@@ -1471,12 +1475,12 @@ function syncOutputQualityForFormat() {
 
 function applyStudioPreset(preset) {
   const presets = {
-    "youtube-sleep": { hz: 432, format: "AAC", bitrate: "320k", sampleRate: "48000", gain: 3, brainwave: "delta", beat: 2.5, binaural: true, drone: false, nature: true, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, label: "YouTube Sleep" },
-    "meditation": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 4.5, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.68, label: "Meditation" },
-    "ambient-producer": { hz: 432, format: "FLAC", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: true, speed: 0.055, depth: 0.68, label: "Ambient Producer" },
-    "healing-frequency": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "48000", gain: 4.5, brainwave: "theta", beat: 6, binaural: false, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.45, label: "Healing Frequency" },
-    "lofi-chill": { hz: 432, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 3, brainwave: "alpha", beat: 10, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Minor", strength: 25, bass: true, bassDb: 6, export8d: false, speed: 0.035, depth: 0.45, label: "Lo-fi / Chill" },
-    "cinematic-trailer": { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 7.5, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 6, export8d: true, speed: 0.085, depth: 0.85, label: "Cinematic / Trailer" }
+    "youtube-sleep": { hz: 432, format: "AAC", bitrate: "320k", sampleRate: "48000", gain: 0, brainwave: "delta", beat: 2.5, binaural: true, drone: false, nature: true, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "zen", label: "YouTube Sleep" },
+    "meditation": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.68, mastering: "zen", label: "Meditation" },
+    "ambient-producer": { hz: 432, format: "FLAC", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: true, speed: 0.055, depth: 0.68, mastering: "ambient-cinematic", label: "Ambient Producer" },
+    "healing-frequency": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 6, binaural: false, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.45, mastering: "zen", label: "Healing Frequency" },
+    "lofi-chill": { hz: 432, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "alpha", beat: 10, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Minor", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "lofi", label: "Lo-fi / Chill" },
+    "cinematic-trailer": { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 7.5, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 4, export8d: true, speed: 0.085, depth: 0.85, mastering: "ambient-cinematic", label: "Cinematic / Trailer" }
   };
   const next = presets[preset];
   if (!next) return;
@@ -1500,8 +1504,9 @@ function applyStudioPreset(preset) {
   $("#export-8d-toggle").checked = next.export8d;
   $("#export-8d-speed").value = String(next.speed);
   $("#export-8d-depth").value = String(next.depth);
+  currentMasteringPreset = next.mastering || "chill";
   syncFrequencyControls("select");
-  setProgress(`${next.label} preset applied: ${next.hz}Hz + ${next.brainwave} layer`, 0);
+  setProgress(`${next.label} preset applied: ${next.hz}Hz + ${next.mastering || "chill"} mastering`, 0);
 }
 
 window.zenTune?.onConvertProgress((payload) => {
