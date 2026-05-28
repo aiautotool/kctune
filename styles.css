@@ -454,6 +454,7 @@ input:disabled {
 
 .card {
   position: relative;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--stroke);
   border-radius: var(--radius);
@@ -470,6 +471,7 @@ input:disabled {
 .batch-card,
 .output-card,
 .route-card {
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -504,10 +506,10 @@ input:disabled {
   position: sticky;
   z-index: 18;
   bottom: 8px;
-  grid-column: 1 / 3;
+  grid-column: 1;
   grid-row: 4;
   display: grid;
-  grid-template-columns: minmax(270px, 1fr) 260px minmax(300px, 1.4fr) 220px;
+  grid-template-columns: minmax(220px, 1fr) 200px minmax(240px, 1.2fr) minmax(190px, 220px);
   gap: 16px;
   align-items: center;
   min-height: 86px;
@@ -536,9 +538,9 @@ input:disabled {
 
 .output-card {
   grid-column: 2;
-  grid-row: 2 / 4;
-  padding: 18px 18px 28px;
-  scroll-padding-bottom: 28px;
+  grid-row: 2 / 5;
+  padding: 18px 18px 96px;
+  scroll-padding-bottom: 96px;
 }
 
 .benefits-card {
@@ -1042,15 +1044,17 @@ input:disabled {
 
 .transport {
   display: grid;
-  grid-template-columns: 1fr 54px 1fr auto;
+  grid-template-columns: repeat(4, minmax(34px, 1fr));
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   margin-top: 0;
 }
 
 .transport button {
+  min-width: 0;
+  padding: 0;
   background: transparent;
-  font-size: 25px;
+  font-size: 22px;
 }
 
 .transport .play {
@@ -1564,8 +1568,8 @@ input[type="checkbox"] {
 
 @media (max-height: 900px) {
   .dashboard {
-    grid-template-rows: 458px 356px 220px 100px;
-    min-height: calc(458px + 356px + 220px + 100px + 24px);
+    grid-template-rows: 220px minmax(360px, calc(100vh - 382px)) 220px 100px;
+    min-height: calc(220px + 360px + 220px + 100px + 128px);
   }
 
   .sidebar-art {
