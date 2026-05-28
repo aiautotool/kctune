@@ -822,14 +822,11 @@ function addTracks(imported) {
     selectedIndex = nextIndices[0];
     selectedIndices = new Set(nextIndices);
     lastSelectedIndex = selectedIndex;
-    setProgress(`Loaded ${next.length} real audio file(s). Auto converting...`, 0);
+    setProgress(`Loaded ${next.length} real audio file(s). Adjust settings, then choose Convert.`, 0);
   } else {
     setProgress("No new supported audio files found.", 0);
   }
   updateSelection();
-  if (next.length) {
-    convertTracks(next, { auto: true });
-  }
 }
 
 async function convertTracks(targetTracks, options = {}) {
