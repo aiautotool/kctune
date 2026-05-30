@@ -11,6 +11,8 @@ let isPlaying = false;
 let loadedPreview = null;
 let pendingSeekRatio = null;
 let isSeeking = false;
+let playerVolume = Number(localStorage.getItem("kctune-player-volume") || 1);
+let lastNonZeroVolume = playerVolume > 0 ? playerVolume : 1;
 let activeLibraryFilter = "All Files";
 const waveformCache = new Map();
 let waveformRequestToken = 0;
@@ -141,6 +143,7 @@ function applyDefaultOutputSettings() {
   $("#format-select").value = "WAV";
   $("#bitrate-select").value = "lossless";
   $("#output-gain-select").value = "0";
+  setVolume(playerVolume);
 }
 
 function selectedOutputFormat() {
@@ -223,17 +226,15 @@ function renderRows() {
     const isSelected = selectedIndices.has(realIndex);
     row.className = `file-row data-row ${isActive ? "active-track" : ""} ${isSelected ? "selected" : ""}`;
     row.type = "button";
+    const statusText = track.status === "Converting" && track.progressPercent != null ? `Converting ${track.progressPercent}%` : track.status;
     row.innerHTML = `
-      <span>${index + 1}</span>
+      <span class="track-index">${index + 1}</span>
       <span class="file-main">
         <span class="file-title"><i class="${index === 0 ? "star" : "badge-icon"}">${index === 0 ? "★" : "⬡"}</i>${escapeHtml(track.name)}</span>
+        <span class="track-subline">${escapeHtml(track.duration)} · ${escapeHtml(track.format)} · ${escapeHtml(track.sampleRate)} · Source ${sourceFrequency(track)}Hz</span>
         <span class="converted-detail">${summaryChips(track).map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
       </span>
-      <span class="file-metric">${track.duration}</span>
-      <span class="file-metric">${track.format}</span>
-      <span class="file-metric">${track.sampleRate}</span>
-      <span class="file-metric">${track.bitrate}</span>
-      <span class="file-status ${statusClass(track.status)}">${track.status === "Converting" && track.progressPercent != null ? `Converting ${track.progressPercent}%` : track.status}</span>
+      <span class="track-status-pill ${statusClass(track.status)}">${escapeHtml(statusText)}</span>
     `;
     row.addEventListener("click", (event) => {
       selectTrackFromGrid(realIndex, {
@@ -253,6 +254,7 @@ function renderRows() {
   $("#processing-count").textContent = processingCount();
   $("#convert-selected").textContent = `${textFor("batch.convertSelected")} (${selectedCount()})`;
   updateLayerSummary();
+  updateRecipeSummary();
 }
 
 function filteredTracks() {
@@ -1073,6 +1075,7 @@ function playFile(filePath, mode, track) {
     audioPlayer.pause();
   }
   audioPlayer = new Audio(pathToFileURL(filePath));
+  audioPlayer.volume = playerVolume;
   loadedPreview = { filePath, mode, trackId: track.id };
   const shouldSeekBeforePlay = Number.isFinite(pendingSeekRatio);
   const startPlayback = () => {
@@ -1176,6 +1179,53 @@ function updatePlaybackUI() {
   $("#seek-duration").textContent = formatClock(duration);
   $("#seek-fill").style.width = `${Math.max(0, Math.min(100, percent))}%`;
   drawWaveform();
+}
+
+function setVolume(value) {
+  const volume = Math.max(0, Math.min(1, Number(value)));
+  playerVolume = Number.isFinite(volume) ? volume : 1;
+  if (playerVolume > 0.01) lastNonZeroVolume = playerVolume;
+  localStorage.setItem("kctune-player-volume", String(playerVolume));
+  if (audioPlayer) audioPlayer.volume = playerVolume;
+  const percent = Math.round(playerVolume * 100);
+  $("#volume-fill").style.width = `${percent}%`;
+  $("#sidebar-volume-fill").style.width = `${percent}%`;
+  $("#volume-value").textContent = `${percent}%`;
+  $("#mute-toggle").textContent = playerVolume <= 0.01 ? "⊘" : "⌕";
+}
+
+function toggleMute() {
+  setVolume(playerVolume > 0.01 ? 0 : lastNonZeroVolume || 1);
+}
+
+function volumeRatioFromPointer(event, element) {
+  const rect = element.getBoundingClientRect();
+  if (!rect.width) return playerVolume;
+  return Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+}
+
+function attachVolumeDrag() {
+  const bars = [$("#volume-bar"), $("#sidebar-volume-bar")].filter(Boolean);
+  let activeBar = null;
+  const update = (event) => {
+    if (!activeBar) return;
+    setVolume(volumeRatioFromPointer(event, activeBar));
+  };
+
+  bars.forEach((bar) => {
+    bar.addEventListener("pointerdown", (event) => {
+      activeBar = bar;
+      bar.setPointerCapture?.(event.pointerId);
+      setVolume(volumeRatioFromPointer(event, bar));
+    });
+    bar.addEventListener("pointermove", update);
+    bar.addEventListener("pointerup", () => {
+      activeBar = null;
+    });
+    bar.addEventListener("pointercancel", () => {
+      activeBar = null;
+    });
+  });
 }
 
 async function seekPreviewToRatio(ratio) {
@@ -1470,17 +1520,45 @@ function syncOutputQualityForFormat() {
   renderRows();
 }
 
+function setSpatialMode(mode) {
+  const normalized = mode === "8d" ? "8d" : mode === "3d" ? "3d" : "off";
+  $("#binaural-toggle").checked = normalized === "3d" || normalized === "8d";
+  $("#export-8d-toggle").checked = normalized === "8d";
+  document.querySelectorAll("[data-spatial]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.spatial === normalized);
+  });
+  updateRecipeSummary();
+}
+
+function updateRecipeSummary() {
+  const summary = $("#recipe-summary");
+  if (!summary) return;
+  const activePreset = document.querySelector(".studio-presets button.active b")?.textContent || "Custom";
+  const format = selectedOutputFormat();
+  const target = targetFrequency();
+  const spatial = $("#export-8d-toggle")?.checked ? "8D" : $("#binaural-toggle")?.checked ? "3D" : "Stereo";
+  summary.textContent = `${activePreset} · ${format} · ${target}Hz · ${spatial}`;
+}
+
 function applyStudioPreset(preset) {
   const presets = {
-    "youtube-sleep": { hz: 432, format: "AAC", bitrate: "320k", sampleRate: "48000", gain: 0, brainwave: "delta", beat: 2.5, binaural: true, drone: false, nature: true, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "zen", label: "YouTube Sleep" },
-    "meditation": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.68, mastering: "zen", label: "Meditation" },
-    "ambient-producer": { hz: 432, format: "FLAC", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: true, speed: 0.055, depth: 0.68, mastering: "ambient-cinematic", label: "Ambient Producer" },
-    "healing-frequency": { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 6, binaural: false, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.45, mastering: "zen", label: "Healing Frequency" },
-    "lofi-chill": { hz: 432, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "alpha", beat: 10, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Minor", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "lofi", label: "Lo-fi / Chill" },
-    "cinematic-trailer": { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 7.5, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 4, export8d: true, speed: 0.085, depth: 0.85, mastering: "ambient-cinematic", label: "Cinematic / Trailer" }
+    chill: { hz: 432, format: "WAV", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "none", beat: 6, binaural: false, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "chill", label: "Chill", spatial: "off" },
+    ambient: { hz: 432, format: "FLAC", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 35, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.68, mastering: "ambient-cinematic", label: "Ambient", spatial: "3d" },
+    cinematic: { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 7.5, binaural: true, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 45, bass: true, bassDb: 4, export8d: true, speed: 0.085, depth: 0.85, mastering: "ambient-cinematic", label: "Cinematic", spatial: "8d" },
+    lofi: { hz: 432, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "alpha", beat: 10, binaural: false, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Minor", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "lofi", label: "Lo-fi", spatial: "off" },
+    edm: { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "none", beat: 6, binaural: false, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Minor", strength: 35, bass: true, bassDb: 6, export8d: false, speed: 0.055, depth: 0.55, mastering: "rock", label: "EDM", spatial: "off" },
+    "trap-rap": { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "none", beat: 6, binaural: false, drone: false, nature: false, autoTune: true, key: "Auto", scale: "Minor", strength: 55, bass: true, bassDb: 6, export8d: false, speed: 0.055, depth: 0.55, mastering: "trap-rap", label: "Trap/Rap", spatial: "off" },
+    "vocal-clean": { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "keep", gain: 0, brainwave: "none", beat: 6, binaural: false, drone: false, nature: false, autoTune: true, key: "Auto", scale: "Major", strength: 55, bass: true, bassDb: 0, export8d: false, speed: 0.035, depth: 0.45, mastering: "chill", label: "Vocal Clean", spatial: "off" },
+    podcast: { hz: 440, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "none", beat: 6, binaural: false, drone: false, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 0, export8d: false, speed: 0.035, depth: 0.35, mastering: "zen", label: "Podcast", spatial: "off" },
+    "spatial-8d": { hz: 432, format: "WAV", bitrate: "lossless", sampleRate: "48000", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 35, bass: true, bassDb: 3, export8d: true, speed: 0.055, depth: 0.85, mastering: "ambient-cinematic", label: "8D Spatial", spatial: "8d" },
+    "youtube-sleep": { hz: 432, format: "AAC", bitrate: "320k", sampleRate: "48000", gain: 0, brainwave: "delta", beat: 2.5, binaural: true, drone: false, nature: true, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.035, depth: 0.45, mastering: "zen", label: "YouTube Sleep", spatial: "3d" },
+    meditation: { hz: 528, format: "MP3", bitrate: "320k", sampleRate: "keep", gain: 0, brainwave: "theta", beat: 6, binaural: true, drone: true, nature: false, autoTune: false, key: "Auto", scale: "Major", strength: 25, bass: true, bassDb: 3, export8d: false, speed: 0.055, depth: 0.68, mastering: "zen", label: "Meditation", spatial: "3d" }
   };
   const next = presets[preset];
   if (!next) return;
+  document.querySelectorAll(".studio-presets button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.preset === preset);
+  });
   $("#target-frequency-select").value = String(next.hz);
   $("#custom-frequency").value = String(next.hz);
   $("#format-select").value = next.format;
@@ -1498,11 +1576,12 @@ function applyStudioPreset(preset) {
   $("#auto-tune-strength").value = String(next.strength);
   $("#bass-enhance-toggle").checked = next.bass;
   $("#bass-boost-select").value = String(next.bassDb);
-  $("#export-8d-toggle").checked = next.export8d;
   $("#export-8d-speed").value = String(next.speed);
   $("#export-8d-depth").value = String(next.depth);
   currentMasteringPreset = next.mastering || "chill";
+  setSpatialMode(next.spatial || (next.export8d ? "8d" : next.binaural ? "3d" : "off"));
   syncFrequencyControls("select");
+  updateRecipeSummary();
   setProgress(`${next.label} preset applied: ${next.hz}Hz + ${next.mastering || "chill"} mastering`, 0);
 }
 
@@ -1551,6 +1630,13 @@ $("#sample-rate-select").addEventListener("change", renderRows);
 $("#output-gain-select").addEventListener("change", renderRows);
 $("#language-select").value = currentLanguage;
 $("#language-select").addEventListener("change", (event) => applyLanguage(event.target.value));
+document.querySelectorAll("[data-spatial]").forEach((button) => {
+  button.addEventListener("click", () => {
+    setSpatialMode(button.dataset.spatial);
+    renderRows();
+    resetLoadedPreviewForFrequencyChange();
+  });
+});
 ["#binaural-toggle", "#export-8d-toggle", "#layer-528-toggle", "#nature-layer-toggle", "#auto-tune-toggle", "#auto-tune-key", "#auto-tune-scale", "#auto-tune-strength", "#bass-enhance-toggle", "#bass-boost-select", "#brainwave-select", "#binaural-beat", "#export-8d-speed", "#export-8d-depth"].forEach((selector) => {
   $(selector)?.addEventListener("change", () => {
     renderRows();
@@ -1564,7 +1650,9 @@ $("#preview-original").addEventListener("click", () => preview("original"));
 $("#preview-converted").addEventListener("click", () => preview("converted"));
 $("#play-preview").addEventListener("click", togglePlayPause);
 $("#stop-preview").addEventListener("click", stopPreview);
+$("#mute-toggle").addEventListener("click", toggleMute);
 attachSeekDrag();
+attachVolumeDrag();
 $("#waveform-canvas").addEventListener("click", (event) => {
   const rect = event.currentTarget.getBoundingClientRect();
   const ratio = (event.clientX - rect.left) / rect.width;

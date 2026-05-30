@@ -73,7 +73,7 @@
 
         <section class="sidebar-volume">
           <span>⌕</span>
-          <div><i style="width: 82%"></i></div>
+          <div id="sidebar-volume-bar"><i id="sidebar-volume-fill"></i></div>
           <span>→</span>
         </section>
       </aside>
@@ -96,24 +96,20 @@
         <section class="dashboard">
           <section class="card file-card">
             <div class="card-head">
-              <h2>All Files (<span id="file-total">18</span>)</h2>
+              <div>
+                <p class="section-kicker">Audio Queue</p>
+                <h2>Ready to Convert <span id="file-total">18</span></h2>
+              </div>
               <div class="table-actions">
                 <button id="import-button">Import⌄</button>
                 <button id="refresh-button">⟳</button>
-                <button>☷</button>
-                <button class="selected">▦</button>
               </div>
             </div>
+            <div class="drop-zone-inline">
+              <strong>Drop files or folders here</strong>
+              <span>MP3, WAV, FLAC, AAC, M4A, AIFF, WEBM</span>
+            </div>
             <div class="file-table">
-              <div class="file-row table-header">
-                <span>#</span>
-                <span>File Name</span>
-                <span>Duration</span>
-                <span>Format</span>
-                <span>Sample Rate</span>
-                <span>Bitrate</span>
-                <span>Status</span>
-              </div>
               <div id="file-rows"></div>
             </div>
           </section>
@@ -154,9 +150,9 @@
             </div>
 
             <div class="volume-row">
-              <span>⌕</span>
-              <div><i></i></div>
-              <span>100%</span>
+              <button id="mute-toggle" class="volume-icon" title="Mute">⌕</button>
+              <div id="volume-bar"><i id="volume-fill"></i></div>
+              <span id="volume-value">100%</span>
             </div>
           </section>
 
@@ -194,35 +190,41 @@
 
           <section class="card batch-card">
             <div class="panel-title compact">
-              <h2 data-i18n="batch.title">Batch Conversion</h2>
+              <div>
+                <p class="section-kicker">Session</p>
+                <h2 data-i18n="batch.title">Batch Conversion</h2>
+              </div>
               <span class="mode-pill" data-i18n="batch.mode">High Quality</span>
             </div>
             <div class="batch-stack">
-              <button class="primary-action" id="convert-all">⟳ Convert All</button>
-              <button class="secondary-action" id="convert-selected">Convert Selected (0)</button>
               <div class="queue-summary">
                 <label data-i18n="batch.queue">Queue</label>
                 <p><b id="processed-count">0</b>/<span id="total-count">18</span> files</p>
                 <div class="small-progress"><i id="small-progress"></i></div>
                 <small id="progress-label">Ready to convert</small>
               </div>
-              <div class="batch-actions split">
-                <button class="secondary-action" id="choose-output" data-i18n="output.choose">Choose Output Folder</button>
-                <button class="secondary-action" id="open-output" data-i18n="output.open">Open Output Folder</button>
-              </div>
             </div>
           </section>
 
           <section class="card output-card">
-            <h2 data-i18n="output.title">Output Settings</h2>
-            <div class="studio-presets">
-              <button data-preset="youtube-sleep" data-i18n="preset.youtubeSleep">YouTube Sleep</button>
-              <button data-preset="meditation" data-i18n="preset.meditation">Meditation</button>
-              <button data-preset="ambient-producer" data-i18n="preset.ambient">Ambient</button>
-              <button data-preset="healing-frequency" data-i18n="preset.healing">Healing</button>
-              <button data-preset="lofi-chill" data-i18n="preset.lofi">Lo-fi</button>
-              <button data-preset="cinematic-trailer" data-i18n="preset.cinematic">Cinematic</button>
+            <div class="recipe-head">
+              <p class="section-kicker">Sound Recipe</p>
+              <h2 data-i18n="output.title">Output Settings</h2>
+              <span id="recipe-summary">Chill · WAV · Clean master</span>
             </div>
+            <div class="studio-presets">
+              <button class="active" data-preset="chill"><b>Chill</b><span>Clean, relaxed</span></button>
+              <button data-preset="ambient"><b>Ambient</b><span>Wide, airy</span></button>
+              <button data-preset="cinematic"><b>Cinematic</b><span>Deep, wide</span></button>
+              <button data-preset="lofi"><b>Lo-fi</b><span>Warm, soft</span></button>
+              <button data-preset="edm"><b>EDM</b><span>Punch, loud</span></button>
+              <button data-preset="trap-rap"><b>Trap/Rap</b><span>Sub control</span></button>
+              <button data-preset="vocal-clean"><b>Vocal Clean</b><span>Clear voice</span></button>
+              <button data-preset="podcast"><b>Podcast</b><span>Speech ready</span></button>
+              <button data-preset="spatial-8d"><b>8D Spatial</b><span>Moving stereo</span></button>
+            </div>
+            <div class="recipe-group">
+              <h3>Frequency</h3>
             <div class="settings-grid output-settings-grid">
               <label><span data-i18n="output.sourceHz">Source Hz</span>
                 <input id="source-frequency" type="number" min="100" max="1200" step="1" value="440" />
@@ -245,6 +247,11 @@
               <label><span data-i18n="output.customHz">Custom Hz</span>
                 <input id="custom-frequency" type="number" min="100" max="1200" step="1" value="432" />
               </label>
+            </div>
+            </div>
+            <div class="recipe-group">
+              <h3>Output</h3>
+            <div class="settings-grid output-settings-grid">
               <label><span data-i18n="output.format">Format</span>
                 <select id="format-select">
                   <option value="MP3">MP3</option>
@@ -290,6 +297,15 @@
                 </select>
               </label>
             </div>
+            </div>
+            <div class="recipe-group">
+              <h3>Spatial Feel</h3>
+              <div class="spatial-options" role="group" aria-label="Spatial Feel">
+                <button type="button" data-spatial="off" class="active">Off</button>
+                <button type="button" data-spatial="3d">3D</button>
+                <button type="button" data-spatial="8d">8D</button>
+              </div>
+            </div>
             <label class="output-path">
               <span data-i18n="output.folder">Output Folder</span>
               <div>
@@ -302,6 +318,17 @@
               <label><input type="checkbox" checked /> Keep original metadata</label>
               <label><input type="checkbox" /> Normalize to -14 LUFS</label>
             </div>
+            <div class="recipe-actions">
+              <button class="primary-action" id="convert-all">⟳ Convert All</button>
+              <button class="secondary-action" id="convert-selected">Convert Selected (0)</button>
+              <div class="batch-actions split">
+                <button class="secondary-action" id="choose-output" data-i18n="output.choose">Choose Output Folder</button>
+                <button class="secondary-action" id="open-output" data-i18n="output.open">Open Output Folder</button>
+              </div>
+            </div>
+            <details class="advanced-layers">
+              <summary data-i18n="layers.advanced">Advanced Studio Settings</summary>
+              <div class="advanced-grid">
             <div class="blackhole-card" id="blackhole-card">
               <div>
                 <strong>BlackHole Realtime Input</strong>
@@ -331,9 +358,6 @@
                 <label><input id="export-8d-toggle" type="checkbox" /> <b data-i18n="layers.motion">Layer 3: 8D Motion</b></label>
                 <span data-i18n="layers.motionDesc">Zen orbit movement</span>
               </article>
-              <details class="advanced-layers">
-                <summary data-i18n="layers.advanced">Advanced Layer Settings</summary>
-                <div>
                   <label><input id="layer-528-toggle" type="checkbox" /> 528Hz resonance drone</label>
                   <label>Brainwave
                     <select id="brainwave-select">
@@ -404,9 +428,9 @@
                       <option value="1">Extreme</option>
                     </select>
                   </label>
-                </div>
-              </details>
             </div>
+              </div>
+            </details>
           </section>
 
           <section class="card benefits-card">
