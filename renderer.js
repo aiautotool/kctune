@@ -13,6 +13,8 @@ let pendingSeekRatio = null;
 let isSeeking = false;
 let playerVolume = Number(localStorage.getItem("kctune-player-volume") || 1);
 let lastNonZeroVolume = playerVolume > 0 ? playerVolume : 1;
+let livePreviewTimer = null;
+let livePreviewToken = 0;
 let activeLibraryFilter = "All Files";
 const waveformCache = new Map();
 let waveformRequestToken = 0;
@@ -333,6 +335,8 @@ function formatClockSampleRate(value) {
 }
 
 function clearLoadedPreview() {
+  clearTimeout(livePreviewTimer);
+  livePreviewToken += 1;
   if (audioPlayer) {
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
@@ -995,7 +999,7 @@ async function openOutputFolder() {
   }
 }
 
-async function preview(mode) {
+async function preview(mode, options = {}) {
   const track = selectedTrack();
   if (!ensureBridge()) return;
   if (!track) {
@@ -1031,10 +1035,10 @@ async function preview(mode) {
     }
     $("#preview-original").classList.toggle("active", mode === "original");
     $("#preview-converted").classList.toggle("active", mode === "converted");
-    setProgress(`Preparing ${mode === "converted" ? `${targetFrequency()}Hz` : "original"} preview...`, 0);
+    if (!options.silent) setProgress(`Preparing ${mode === "converted" ? `${targetFrequency()}Hz` : "original"} preview...`, 0);
     const result = await window.zenTune.previewTrack(track, mode);
     playFile(result.previewPath, mode, track);
-    setProgress(`Playing ${mode === "converted" ? `Converted (${targetFrequency()}Hz)` : `Original (${sourceFrequency()}Hz)`}: ${track.name}`, 0);
+    if (!options.silent) setProgress(`Playing ${mode === "converted" ? `Converted (${targetFrequency()}Hz)` : `Original (${sourceFrequency()}Hz)`}: ${track.name}`, 0);
   } catch (error) {
     setProgress(`Preview failed: ${error.message}`, 0);
     showMessage(`Preview failed:\n${error.message}`);
@@ -1445,6 +1449,10 @@ function applyFrequencyToTracks(scope = "selected") {
 }
 
 function resetLoadedPreviewForFrequencyChange() {
+  if (audioPlayer && !audioPlayer.paused) {
+    scheduleLivePreviewRefresh();
+    return;
+  }
   if (!audioPlayer && !loadedPreview) return;
   clearLoadedPreview();
   const track = selectedTrack();
@@ -1453,6 +1461,34 @@ function resetLoadedPreviewForFrequencyChange() {
     $("#track-status").style.color = track.status === "Converted" ? "var(--green)" : "var(--text)";
     updateMiniPlayer(track);
   }
+}
+
+function scheduleLivePreviewRefresh() {
+  const track = selectedTrack();
+  if (!track || !audioPlayer || audioPlayer.paused) {
+    resetLoadedPreviewForFrequencyChange();
+    return;
+  }
+  const duration = Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0 ? audioPlayer.duration : 0;
+  pendingSeekRatio = duration ? Math.max(0, Math.min(1, audioPlayer.currentTime / duration)) : null;
+  const token = ++livePreviewToken;
+  clearTimeout(livePreviewTimer);
+  setProgress("Updating live preview with new settings...", 0);
+  livePreviewTimer = setTimeout(async () => {
+    if (token !== livePreviewToken) return;
+    try {
+      await preview(activePreviewMode, { silent: true });
+      setProgress(`Live preview updated: ${activePreviewMode === "converted" ? `${targetFrequency()}Hz` : `${sourceFrequency()}Hz`}`, 0);
+    } catch {
+      // preview() already reports user-facing errors.
+    }
+  }, 420);
+}
+
+function applySettingsChange(options = {}) {
+  renderRows();
+  updateRecipeSummary();
+  if (options.preview !== false) resetLoadedPreviewForFrequencyChange();
 }
 
 function syncFrequencyControls(source = "select") {
@@ -1517,7 +1553,7 @@ function syncOutputQualityForFormat() {
   } else if (format === "AAC" && bitrate.value === "lossless") {
     bitrate.value = "512k";
   }
-  renderRows();
+  applySettingsChange({ preview: false });
 }
 
 function setSpatialMode(mode) {
@@ -1582,6 +1618,7 @@ function applyStudioPreset(preset) {
   setSpatialMode(next.spatial || (next.export8d ? "8d" : next.binaural ? "3d" : "off"));
   syncFrequencyControls("select");
   updateRecipeSummary();
+  resetLoadedPreviewForFrequencyChange();
   setProgress(`${next.label} preset applied: ${next.hz}Hz + ${next.mastering || "chill"} mastering`, 0);
 }
 
@@ -1626,21 +1663,19 @@ $("#target-frequency-select").addEventListener("change", () => handleFrequencyCh
 $("#custom-frequency").addEventListener("input", () => handleFrequencyChange("custom"));
 $("#format-select").addEventListener("change", syncOutputQualityForFormat);
 $("#bitrate-select").addEventListener("change", syncOutputQualityForFormat);
-$("#sample-rate-select").addEventListener("change", renderRows);
-$("#output-gain-select").addEventListener("change", renderRows);
+$("#sample-rate-select").addEventListener("change", () => applySettingsChange());
+$("#output-gain-select").addEventListener("change", () => applySettingsChange());
 $("#language-select").value = currentLanguage;
 $("#language-select").addEventListener("change", (event) => applyLanguage(event.target.value));
 document.querySelectorAll("[data-spatial]").forEach((button) => {
   button.addEventListener("click", () => {
     setSpatialMode(button.dataset.spatial);
-    renderRows();
-    resetLoadedPreviewForFrequencyChange();
+    applySettingsChange();
   });
 });
 ["#binaural-toggle", "#export-8d-toggle", "#layer-528-toggle", "#nature-layer-toggle", "#auto-tune-toggle", "#auto-tune-key", "#auto-tune-scale", "#auto-tune-strength", "#bass-enhance-toggle", "#bass-boost-select", "#brainwave-select", "#binaural-beat", "#export-8d-speed", "#export-8d-depth"].forEach((selector) => {
   $(selector)?.addEventListener("change", () => {
-    renderRows();
-    resetLoadedPreviewForFrequencyChange();
+    applySettingsChange();
   });
 });
 document.querySelectorAll(".studio-presets button").forEach((button) => {

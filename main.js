@@ -501,13 +501,14 @@ function numberInRange(value, fallback, min, max) {
 function spatial8dFilter(inputLabel, outputLabel, options = {}) {
   const speed = numberInRange(options.export8dSpeed, 0.055, 0.015, 0.18);
   const depth = numberInRange(options.export8dDepth, 0.68, 0.2, 1);
-  const highDepth = Math.min(1, depth + 0.18);
+  const highDepth = Math.min(0.82, depth + 0.12);
   const period = (1 / speed).toFixed(4);
   const highPeriod = (1 / (speed * 1.35)).toFixed(4);
-  const leftGain = (amount, cyclePeriod) => `(1-${amount})+${amount}*((1-cos(6.283185307*max(t\\,0)/${cyclePeriod}))/2)`;
-  const rightGain = (amount, cyclePeriod) => `(1-${amount})+${amount}*((1+cos(6.283185307*max(t\\,0)/${cyclePeriod}))/2)`;
-  const midLeft = leftGain(depth.toFixed(3), period);
-  const midRight = rightGain(depth.toFixed(3), period);
+  const safeDepth = Math.min(0.82, depth);
+  const leftGain = (amount, cyclePeriod) => `(1-${amount})+${amount}*sqrt((1-cos(6.283185307*max(t\\,0)/${cyclePeriod}))/2)`;
+  const rightGain = (amount, cyclePeriod) => `(1-${amount})+${amount}*sqrt((1+cos(6.283185307*max(t\\,0)/${cyclePeriod}))/2)`;
+  const midLeft = leftGain(safeDepth.toFixed(3), period);
+  const midRight = rightGain(safeDepth.toFixed(3), period);
   const highLeft = rightGain(highDepth.toFixed(3), highPeriod);
   const highRight = leftGain(highDepth.toFixed(3), highPeriod);
   const haasDelay = Math.round(6 + (depth * 16));
@@ -522,12 +523,12 @@ function spatial8dFilter(inputLabel, outputLabel, options = {}) {
     `[${inputLabel}mid]highpass=f=170,lowpass=f=4200,channelsplit=channel_layout=stereo[${inputLabel}midL][${inputLabel}midR]`,
     `[${inputLabel}midL]volume='${midLeft}':eval=frame[${inputLabel}midLp]`,
     `[${inputLabel}midR]volume='${midRight}':eval=frame[${inputLabel}midRp]`,
-    `[${inputLabel}midLp][${inputLabel}midRp]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,aecho=0.84:0.22:${roomDelayA}|${roomDelayB}:${roomDecayA}|${roomDecayB},volume=0.84[${inputLabel}mid8d]`,
+    `[${inputLabel}midLp][${inputLabel}midRp]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,aecho=0.80:0.18:${roomDelayA}|${roomDelayB}:${roomDecayA}|${roomDecayB},acompressor=threshold=0.62:ratio=1.8:attack=18:release=220:makeup=1,volume=0.86[${inputLabel}mid8d]`,
     `[${inputLabel}high]highpass=f=4200,adelay=0|${haasDelay},channelsplit=channel_layout=stereo[${inputLabel}highL][${inputLabel}highR]`,
     `[${inputLabel}highL]volume='${highLeft}':eval=frame[${inputLabel}highLp]`,
     `[${inputLabel}highR]volume='${highRight}':eval=frame[${inputLabel}highRp]`,
-    `[${inputLabel}highLp][${inputLabel}highRp]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,volume=0.70[${inputLabel}high8d]`,
-    `[${inputLabel}low8d][${inputLabel}mid8d][${inputLabel}high8d]amix=inputs=3:duration=first:normalize=0,acompressor=threshold=0.58:ratio=2.4:attack=20:release=260,alimiter=limit=0.96[${outputLabel}]`
+    `[${inputLabel}highLp][${inputLabel}highRp]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,acompressor=threshold=0.66:ratio=1.6:attack=8:release=140:makeup=1,volume=0.66[${inputLabel}high8d]`,
+    `[${inputLabel}low8d][${inputLabel}mid8d][${inputLabel}high8d]amix=inputs=3:duration=first:normalize=0,acompressor=threshold=0.56:ratio=2.8:attack=24:release=300:makeup=1,dynaudnorm=f=250:g=7:p=0.84:m=8,alimiter=limit=0.94:attack=8:release=120[${outputLabel}]`
   ];
 }
 
