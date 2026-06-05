@@ -666,7 +666,7 @@ async function convertTrack(track, options, onProgress) {
   let outputPath = path.join(outputFolder, `${path.parse(track.path).name}_${targetFrequency}Hz.${outputExt}`);
   const sampleRate = Number(track.sampleRateRaw) || 44100;
   const outputSampleRate = options.sampleRate && options.sampleRate !== "keep" ? Number(options.sampleRate) : sampleRate;
-  const shiftedRate = Math.round(outputSampleRate * targetFrequency / sourceFrequency);
+  const shiftedRate = Math.round(sampleRate * targetFrequency / sourceFrequency);
   const artworkPath = track.artworkPath && isArtworkFile(track.artworkPath) ? track.artworkPath : null;
   const embedsArtwork = artworkPath && ["mp3", "flac", "aac"].includes(outputFormat);
   const duration = Math.max(1, Number(track.durationSeconds) || 3600);
@@ -811,6 +811,10 @@ async function convertTrack(track, options, onProgress) {
       "-metadata:s:v", "title=Album cover",
       "-metadata:s:v", "comment=Cover (front)"
     );
+  }
+
+  if (Number.isFinite(outputSampleRate) && outputSampleRate > 0) {
+    args.push("-ar", String(outputSampleRate));
   }
 
   args.push(outputPath);
